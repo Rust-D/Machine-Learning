@@ -4,6 +4,7 @@ import xgboost as xgb
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt #グラフ作成
 from sklearn.decomposition import PCA
 
 
@@ -38,15 +39,17 @@ class Amodel:
 
             inspection.fit(df_ss)
             distortions.append(inspection.inertia_)
-            #print('Distortion: %.2f'% inspection.inertia_)
+            print('Distortion: %.2f'% inspection.inertia_)
 
             a = inspection.inertia_
 
             dif = b-a
-            #print('dif = %.2f'% dif)
+            print('dif = %.2f'% dif)
             dif_l.append(dif)
     
             b = inspection.inertia_
+
+        print(dif_l)
 
         dif_b = 0
         max_o = 0
@@ -54,16 +57,22 @@ class Amodel:
         for i in range(1,7):
 
             dif_a = dif_l[i]
-            #print('dif_a:%.2f'% dif_a)
+            print('dif_a:%.2f'% dif_a)
             optimum = dif_b / dif_a
-            #print(optimum)
+            print(optimum)
             dif_b = dif_l[i]
-            #print('dif_b:%.2f'% dif_b)
+            print('dif_b:%.2f'% dif_b)
             
             if optimum > max_o:
                 max_o = optimum
                 num = i  #最適なクラスタ数
+        
+        print(num)
 
+        plt.plot(range(1,9),distortions,marker='o')
+        plt.xlabel('Number of clusters')
+        plt.ylabel('Distortion')
+        plt.show()
 
         cluster_model = KMeans(n_clusters=i) #クラスタリングのモデル作成
         cluster_model.fit(df_ss)
@@ -73,6 +82,14 @@ class Amodel:
 
         self.input_s = input_s
         self.cluster_df = df 
+
+        plt.figure(figsize=(6, 6))
+        plt.scatter(feature[:, 0], feature[:, 1], alpha=0.8, c=cluster)
+        plt.xlabel('principal component 1')
+        plt.ylabel('principal component 2')
+        plt.show()
+
+        #print('Distortion: %.2f'% cluster_model.inertia_) #クラスタ内誤差平方和
 
     def make_model(self, input_df: pd.DataFrame):
         self.make_cluster(input_df) #クラスタリングのメソッド呼び出し
@@ -89,7 +106,7 @@ class Amodel:
             'random_state': 1,
             'num_class': num_class
         }
-        num_round = 10
+        num_round = 30
 
         model = xgb.train(params, dtrain, num_round)
 
@@ -102,6 +119,7 @@ class Amodel:
         model = self.model
         cluster_df = copy.deepcopy(self.cluster_df)
 
+        #print(type(model))
 
         # 属するクラスタの予測
         pred_ = model.predict(xgb.DMatrix(situation))
@@ -127,7 +145,7 @@ if __name__ == '__main__':
     _input = pd.read_csv(path)
 
     #受け取ったデータをlにいれる
-    l = [[2000,12000,1,1,3,1,0,0,0,0]]
+    l = [[500,10000,0,0,3,0,0,1,0,0]]
     sample = pd.DataFrame(l, columns=['moneyMin','moneyMax','age','sex','season','topic1','topic2','topic3','topic4','topic5'])
 
     model = Amodel()
